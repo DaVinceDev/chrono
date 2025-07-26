@@ -1,2 +1,2 @@
-dev/zig-out/
-dev/.zig-cache/
+zig-out/
+.zig-cache/
