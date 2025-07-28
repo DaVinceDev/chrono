@@ -9,11 +9,11 @@ pub fn main() !void {
 
     const content = contentBuf[0..contentBytes];
 
-    // const source = "const x = 10;";
     var lexer = ChronoLexer.Lexer.init(content);
+
     while (true) {
-        const token = lexer.nextToken();
-        std.debug.print("Token: {}, Lexeme: {s}\n", .{ token.token_type, token.lexeme });
-        if (token.token_type == ChronoLexer.TokenType.EOF) break;
+        const token = lexer.next();
+        std.debug.print("[TOKEN]:{s}\t[TYPE]:{}\n", .{ token.lexeme, token.token_type });
+        if (token.token_type == .EOF) break;
     }
 }
