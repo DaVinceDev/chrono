@@ -11,6 +11,7 @@ const TokenType = enum {
     KEYWORD,
     UNKNOWN,
     EOF,
+    ATTRIBUTE,
 };
 
 pub const Lexer = struct {
@@ -70,8 +71,21 @@ pub const Lexer = struct {
             }
 
             const lexeme = self.input[start_pos..self.pos];
+            if (self.isKeyword(lexeme)) {
+                return Token{ .lexeme = lexeme, .token_type = .KEYWORD };
+            }
             return Token{ .token_type = .IDENTIFIER, .lexeme = lexeme };
         }
+
+        // if (self.isAtrribute(current_char)) {
+        //     while (true) {
+        //         const char2 = self.peek();
+        //         if (char2 == null or !self.isAlpha(char2.?) or self.isSymbol(char2.?)) break;
+        //         _ = self.advance();
+        //     }
+        //     const lexeme = self.input[start_pos..self.pos];
+        //     return Token{ .token_type = .ATTRIBUTE, .lexeme = lexeme };
+        // }
 
         if (self.isNumber(current_char)) {
             while (true) {
@@ -160,4 +174,40 @@ pub const Lexer = struct {
             return true;
         } else return false;
     }
+
+    pub fn isKeyword(_: *Lexer, word: []const u8) bool {
+        const allocator = std.heap.page_allocator;
+        var keyDict = std.StringHashMap([]const u8).init(allocator);
+        defer keyDict.deinit();
+
+        _ = keyDict.put("fn", "") catch return false;
+        _ = keyDict.put("return", "") catch return false;
+        _ = keyDict.put("use", "") catch return false;
+        _ = keyDict.put("as", "") catch return false;
+        _ = keyDict.put("const", "") catch return false;
+        _ = keyDict.put("var", "") catch return false;
+        _ = keyDict.put("class", "") catch return false;
+        _ = keyDict.put("pub", "") catch return false;
+        _ = keyDict.put("priv", "") catch return false;
+        _ = keyDict.put("prot", "") catch return false;
+        _ = keyDict.put("creator", "") catch return false;
+        _ = keyDict.put("destroyer", "") catch return false;
+        _ = keyDict.put("if", "") catch return false;
+        _ = keyDict.put("else", "") catch return false;
+        _ = keyDict.put("or", "") catch return false;
+        _ = keyDict.put("and", "") catch return false;
+        _ = keyDict.put("for", "") catch return false;
+        _ = keyDict.put("foreach", "") catch return false;
+        _ = keyDict.put("while", "") catch return false;
+        _ = keyDict.put("switch", "") catch return false;
+        _ = keyDict.put("error", "") catch return false;
+        _ = keyDict.put("default", "") catch return false;
+        _ = keyDict.put("try", "") catch return false;
+        _ = keyDict.put("catch", "") catch return false;
+        return keyDict.contains(word);
+    }
+
+    // pub fn isAtrribute(_: *Lexer, char: u8) bool {
+    //     return char == '@';
+    // }
 };

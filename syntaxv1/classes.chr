@@ -1,0 +1,32 @@
+
+fn main() !void {
+
+  // var db = DatabaseManager();
+
+  const db_url = "http://database:postgres:banana:1234";
+  var db = try DatabaseManager.init(db_url);
+  try db.actionThatMightReturnError();
+
+  try db.deinit();
+}
+
+class DatabaseManager {
+  
+  priv var db_url;
+  
+  fn init(url:string) !creator{
+     db_url = url;
+     // ...
+  }
+
+  fn actionThatMightReturnError() !void {
+    if(condition){
+        return error;
+    }
+    // ...
+  }
+
+  fn deinit() !destroyer {
+    // ...
+  }
+}

@@ -1,0 +1,6 @@
+use chrono.std.io as io;
+
+fn main() !void {
+    const hello_world: string = "Hello world!";
+    io.print("{s}\n", .{ hello_world } );
+}

@@ -1,0 +1,35 @@
+use hourglass.controller;
+
+@Controller("users", .{})
+pub class UserController{
+
+  priv const db = DatabaseManagerDefined();
+
+  @Get("users")
+  fn getUsers() !Result<User[]> {
+      const users = try db.Users.GetUsers();
+      return Ok(users);
+  }
+
+  @Post("new-user")
+  fn newUser(user:User) !Result {
+    try db.Users.Add(User);
+    return Ok();
+  }
+}
+
+@Controller("adim", .{
+    .authorize = true
+    .roles = {"superuser","master"}
+})
+pub class AdminController{
+
+  priv const db = DatabaseManagerDefined();
+  
+  @Post("new-admin")
+  fn newUser(adm:Admin) Result {
+    // ...
+    return Ok();
+  }
+}
+
