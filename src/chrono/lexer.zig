@@ -60,21 +60,11 @@ pub fn next(self: *Lexer) Token {
         }
 
         const lexeme = self.input[start_pos..self.pos];
-        if (self.isKeyword(lexeme)) {
-            return Token{ .lexeme = lexeme, .token_type = .KEYWORD };
-        }
-        return Token{ .token_type = .IDENTIFIER, .lexeme = lexeme };
+        const keyword = self.isKeyword(lexeme) orelse {
+            return Token{ .token_type = .IDENTIFIER, .lexeme = lexeme };
+        };
+        return Token{ .token_type = keyword, .lexeme = lexeme };
     }
-
-    // if (self.isAtrribute(current_char)) {
-    //     while (true) {
-    //         const char2 = self.peek();
-    //         if (char2 == null or !self.isAlpha(char2.?) or self.isSymbol(char2.?)) break;
-    //         _ = self.advance();
-    //     }
-    //     const lexeme = self.input[start_pos..self.pos];
-    //     return Token{ .token_type = .ATTRIBUTE, .lexeme = lexeme };
-    // }
 
     if (self.isNumber(current_char)) {
         while (true) {
@@ -93,9 +83,12 @@ pub fn next(self: *Lexer) Token {
             _ = self.advance();
         }
 
+        const operator = self.whichOperator(current_char) orelse return Token{ .lexeme = "", .token_type = .EOF };
+
         const lexeme = self.input[start_pos..self.pos];
-        return Token{ .token_type = .OPERATOR, .lexeme = lexeme };
+        return Token{ .token_type = operator, .lexeme = lexeme };
     }
+
     if (self.isPontuation(current_char)) {
         while (true) {
             const char2 = self.peek();
@@ -103,8 +96,10 @@ pub fn next(self: *Lexer) Token {
             _ = self.advance();
         }
 
+        const pontuation = self.whichPontuation(current_char) orelse return Token{ .lexeme = "", .token_type = .EOF };
+
         const lexeme = self.input[start_pos..self.pos];
-        return Token{ .token_type = .PONTUATION, .lexeme = lexeme };
+        return Token{ .token_type = pontuation, .lexeme = lexeme };
     }
     if (self.isSymbol(current_char)) {
         while (true) {
@@ -114,7 +109,9 @@ pub fn next(self: *Lexer) Token {
         }
 
         const lexeme = self.input[start_pos..self.pos];
-        return Token{ .token_type = .SYMBOL, .lexeme = lexeme };
+        const symbol = self.whichSyboml(current_char) orelse return Token{ .lexeme = "", .token_type = .EOF };
+
+        return Token{ .token_type = symbol, .lexeme = lexeme };
     }
     _ = self.advance();
     const lexeme = self.input[start_pos..self.pos];
@@ -141,6 +138,26 @@ pub fn isOperator(_: *Lexer, char: u8) bool {
     } else return false;
 }
 
+pub fn whichOperator(_: *Lexer, char: u8) ?Token.TokenType {
+    switch (char) {
+        '+' => return Token.TokenType{ .OPERATOR = .plus },
+        '-' => return Token.TokenType{ .OPERATOR = .minus },
+        '*' => return Token.TokenType{ .OPERATOR = .times },
+        '/' => return Token.TokenType{ .OPERATOR = .divideBy },
+        '=' => return Token.TokenType{ .OPERATOR = .equal },
+        else => return null,
+    }
+}
+
+pub fn whichSyboml(_: *Lexer, char: u8) ?Token.TokenType {
+    switch (char) {
+        '(', ')' => return Token.TokenType{ .SYMBOL = .roundBracket },
+        '{', '}' => return Token.TokenType{ .SYMBOL = .curlyBracket },
+        '[', ']' => return Token.TokenType{ .SYMBOL = .bracket },
+        else => return null,
+    }
+}
+
 pub fn isPontuation(_: *Lexer, char: u8) bool {
     if (char == ';' or char == ',' or char == '?' or char == '!' or char == '.' or char == ':') {
         return true;
@@ -164,46 +181,57 @@ pub fn isSymbol(_: *Lexer, char: u8) bool {
     } else return false;
 }
 
-pub fn isKeyword(_: *Lexer, word: []const u8) bool {
+pub fn whichPontuation(_: *Lexer, char: u8) ?Token.TokenType {
+    switch (char) {
+        ';' => return Token.TokenType{ .PONTUATION = .semi_colon },
+        ',' => return Token.TokenType{ .PONTUATION = .comma },
+        '?' => return Token.TokenType{ .PONTUATION = .interogation },
+        '!' => return Token.TokenType{ .PONTUATION = .exclamation },
+        '.' => return Token.TokenType{ .PONTUATION = .dot },
+        ':' => return Token.TokenType{ .PONTUATION = .colon },
+        else => return null,
+    }
+}
+
+pub fn isKeyword(_: *Lexer, word: []const u8) ?Token.TokenType {
     const allocator = std.heap.page_allocator;
-    var keyDict = std.StringHashMap([]const u8).init(allocator);
+    var keyDict = std.StringArrayHashMap(Token.TokenType).init(allocator);
     defer keyDict.deinit();
 
-    _ = keyDict.put("fn", "") catch return false;
-    _ = keyDict.put("return", "") catch return false;
-    _ = keyDict.put("use", "") catch return false;
-    _ = keyDict.put("as", "") catch return false;
-    _ = keyDict.put("const", "") catch return false;
-    _ = keyDict.put("var", "") catch return false;
-    _ = keyDict.put("class", "") catch return false;
-    _ = keyDict.put("pub", "") catch return false;
-    _ = keyDict.put("priv", "") catch return false;
-    _ = keyDict.put("prot", "") catch return false;
-    _ = keyDict.put("creator", "") catch return false;
-    _ = keyDict.put("destroyer", "") catch return false;
-    _ = keyDict.put("if", "") catch return false;
-    _ = keyDict.put("else", "") catch return false;
-    _ = keyDict.put("or", "") catch return false;
-    _ = keyDict.put("and", "") catch return false;
-    _ = keyDict.put("for", "") catch return false;
-    _ = keyDict.put("foreach", "") catch return false;
-    _ = keyDict.put("while", "") catch return false;
-    _ = keyDict.put("switch", "") catch return false;
-    _ = keyDict.put("error", "") catch return false;
-    _ = keyDict.put("default", "") catch return false;
-    _ = keyDict.put("try", "") catch return false;
-    _ = keyDict.put("catch", "") catch return false;
-    return keyDict.contains(word);
+    _ = keyDict.put("fn", .{ .KEYWORD = .function_kw }) catch return null;
+    _ = keyDict.put("return", .{ .KEYWORD = .return_kw }) catch return null;
+    _ = keyDict.put("use", .{ .KEYWORD = .use_kw }) catch return null;
+    _ = keyDict.put("as", .{ .KEYWORD = .as_kw }) catch return null;
+    _ = keyDict.put("const", .{ .KEYWORD = .const_kw }) catch return null;
+    _ = keyDict.put("var", .{ .KEYWORD = .var_kw }) catch return null;
+    _ = keyDict.put("class", .{ .KEYWORD = .class_kw }) catch return null;
+    _ = keyDict.put("pub", .{ .KEYWORD = .pub_kw }) catch return null;
+    _ = keyDict.put("priv", .{ .KEYWORD = .priv_kw }) catch return null;
+    _ = keyDict.put("prot", .{ .KEYWORD = .prot_kw }) catch return null;
+    _ = keyDict.put("creator", .{ .KEYWORD = .creator_kw }) catch return null;
+    _ = keyDict.put("destroyer", .{ .KEYWORD = .destroyer_kw }) catch return null;
+    _ = keyDict.put("if", .{ .KEYWORD = .if_kw }) catch return null;
+    _ = keyDict.put("else", .{ .KEYWORD = .else_kw }) catch return null;
+    _ = keyDict.put("or", .{ .KEYWORD = .or_kw }) catch return null;
+    _ = keyDict.put("and", .{ .KEYWORD = .and_kw }) catch return null;
+    _ = keyDict.put("for", .{ .KEYWORD = .for_kw }) catch return null;
+    _ = keyDict.put("foreach", .{ .KEYWORD = .foreach_kw }) catch return null;
+    _ = keyDict.put("while", .{ .KEYWORD = .while_kw }) catch return null;
+    _ = keyDict.put("switch", .{ .KEYWORD = .switch_kw }) catch return null;
+    _ = keyDict.put("error", .{ .KEYWORD = .error_kw }) catch return null;
+    _ = keyDict.put("default", .{ .KEYWORD = .default_kw }) catch return null;
+    _ = keyDict.put("try", .{ .KEYWORD = .try_kw }) catch return null;
+    _ = keyDict.put("catch", .{ .KEYWORD = .catch_kw }) catch return null;
+    return keyDict.get(word);
 }
 
 pub fn tokens(self: *Lexer) ![]Token {
     var map = std.ArrayList(Token).init(std.heap.page_allocator);
-    defer map.deinit();
 
     while (true) {
         const token = self.next();
         if (token.token_type == .EOF) break;
-        _ = try map.append(token.lexeme, token.token_type);
+        _ = try map.append(token);
     }
 
     return map.items;

@@ -1,4 +1,6 @@
 const std = @import("std");
+const Lexer = @import("chrono/lexer.zig");
+const Parser = @import("chrono/parser.zig");
 
 pub fn main() !void {
     var file = try std.fs.cwd().openFile("syntaxv1/basics.chr", .{ .mode = .read_only });
@@ -8,9 +10,19 @@ pub fn main() !void {
 
     const content = contentBuf[0..contentBytes];
 
-    _ = content;
+    var lexer = Lexer.init(content);
 
-    //TASKS:
-    //  * AMPLIFY THE PARSER
-    //  * MAKE A PRETTY PRINTER
+    var allocator = std.heap.page_allocator;
+
+    var index: usize = 0;
+    const tokens = try lexer.tokens();
+    std.debug.print("Tokens size:{}\n\n", .{tokens.len});
+    const nodes = Parser.parseVariableDeclaration(&allocator, tokens, &index);
+
+    if (nodes == null) {
+        std.debug.print("Nodes returned null.\n", .{});
+    }
+
+    std.debug.print("{}\n\t", .{nodes.?.kind});
+    std.debug.print("{}\n", .{nodes.?.data});
 }
