@@ -1,6 +1,6 @@
 const std = @import("std");
 const Lexer = @import("chrono/lexer.zig");
-const Parser = @import("chrono/parserv2.zig");
+const Parser = @import("chrono/parser.zig");
 const ASTNode = @import("chrono/ast.zig");
 
 pub fn main() !void {
@@ -20,14 +20,11 @@ pub fn main() !void {
     std.debug.print("Tokens size:{}\n\n", .{tokens.len});
     const nodes = try Parser.ParseTokens(&allocator, tokens, &index);
 
-    for (nodes) |node| {
-        prettyPrinter(node);
+    if (nodes != null) {
+        for (nodes.?) |node| {
+            prettyPrinter(node);
+        }
     }
-
-    // if (nodes == null) {
-    //     std.debug.print("Nodes returned null.\n", .{});
-    // }
-    // prettyPrinter(nodes);
 }
 
 fn prettyPrinter(node: ?*ASTNode) void {
