@@ -1,6 +1,7 @@
 const std = @import("std");
 const Lexer = @import("chrono/lexer.zig");
-const Parser = @import("chrono/parser.zig");
+const Parser = @import("chrono/parserv2.zig");
+const ASTNode = @import("chrono/ast.zig");
 
 pub fn main() !void {
     var file = try std.fs.cwd().openFile("syntaxv1/basics.chr", .{ .mode = .read_only });
@@ -17,12 +18,54 @@ pub fn main() !void {
     var index: usize = 0;
     const tokens = try lexer.tokens();
     std.debug.print("Tokens size:{}\n\n", .{tokens.len});
-    const nodes = Parser.parseVariableDeclaration(&allocator, tokens, &index);
+    const nodes = try Parser.ParseTokens(&allocator, tokens, &index);
 
-    if (nodes == null) {
-        std.debug.print("Nodes returned null.\n", .{});
+    for (nodes) |node| {
+        prettyPrinter(node);
     }
 
-    std.debug.print("{}\n\t", .{nodes.?.kind});
-    std.debug.print("{}\n", .{nodes.?.data});
+    // if (nodes == null) {
+    //     std.debug.print("Nodes returned null.\n", .{});
+    // }
+    // prettyPrinter(nodes);
+}
+
+fn prettyPrinter(node: ?*ASTNode) void {
+    const nodeKind = node.?.kind;
+    const nodeData = node.?.data;
+
+    switch (nodeKind) {
+        .Assignment => std.debug.print("Kind: Assignment\n\t", .{}),
+        .BinaryOperator => std.debug.print("Kind: BinaryOperator\n\t", .{}),
+        .NumberLiteral => std.debug.print("Kind: NumberLiteral\n\t", .{}),
+        .VariableDeclaration => std.debug.print("Kind: VariableDeclaration\n\t", .{}),
+        .VariableReference => std.debug.print("Kind: VariableReference\n\t", .{}),
+    }
+
+    switch (nodeData) {
+        .VariableReference => |x| {
+            std.debug.print("VariableReference:\n\t", .{});
+            std.debug.print("{s}\n", .{x.name});
+        },
+        .VariableDeclaration => |x| {
+            std.debug.print("VariableDeclaration:\n\t", .{});
+            std.debug.print("{s}\n", .{x.name});
+            std.debug.print("{}\n", .{x.expression.?.*});
+        },
+        .NumberLiteral => |x| {
+            std.debug.print("NumberLiteral:\n\t", .{});
+            std.debug.print("{}\n", .{x.value});
+        },
+        .BinaryOperator => |x| {
+            std.debug.print("BinaryOperator:\n\t", .{});
+            std.debug.print("Left: {}\n", .{x.left});
+            std.debug.print("Operator: {c}\n", .{x.operator});
+            std.debug.print("Right: {}\n", .{x.right});
+        },
+        .Assignment => |x| {
+            std.debug.print("Assignment:\n\t", .{});
+            std.debug.print("{}\n", .{x.variable.*});
+            std.debug.print("{}\n", .{x.expression.*});
+        },
+    }
 }
