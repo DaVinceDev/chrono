@@ -4,7 +4,7 @@ const Parser = @import("chrono/parser.zig");
 const ASTNode = @import("chrono/ast.zig");
 
 pub fn main() !void {
-    var file = try std.fs.cwd().openFile("syntaxv1/basics.chr", .{ .mode = .read_only });
+    var file = try std.fs.cwd().openFile("syntaxv1/basics.ksm", .{ .mode = .read_only });
 
     var contentBuf: [1024]u8 = undefined;
     const contentBytes = try file.readAll(&contentBuf);
@@ -18,12 +18,15 @@ pub fn main() !void {
     var index: usize = 0;
     const tokens = try lexer.tokens();
     std.debug.print("Tokens size:{}\n\n", .{tokens.len});
+
     const nodes = try Parser.ParseTokens(&allocator, tokens, &index);
 
     if (nodes != null) {
         for (nodes.?) |node| {
             prettyPrinter(node);
         }
+    } else {
+        std.debug.print("Nodes returned null.\n", .{});
     }
 }
 

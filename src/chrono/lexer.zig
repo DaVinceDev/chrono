@@ -236,3 +236,4 @@ pub fn tokens(self: *Lexer) ![]Token {
 
     return map.items;
 }
+
