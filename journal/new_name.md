@@ -12,3 +12,8 @@ As the pet it would be space-time axolotl named komus.
 ## The future of Chrono(now Kosmo)
 
 As I finish the version 0 of the compiler and stabilize the syntax I will be renaming, refactoring and rebranding chrono to kosmo.
+
+
+## And I changed again!
+
+Atom for now is ok Ig.

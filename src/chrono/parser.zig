@@ -5,9 +5,13 @@ const std = @import("std");
 const Parser = @This();
 
 pub fn advance(tokens: []Token, index: *usize, token_type: *Token.TokenType) void {
-    if (index.* + 1 >= tokens.len) return;
-    index.* += 1;
-    token_type.* = tokens[index.*].token_type;
+    if (index.* + 1 >= tokens.len) {
+        index.* = tokens.len;
+        token_type.* = .EOF;
+    } else {
+        index.* += 1;
+        token_type.* = tokens[index.*].token_type;
+    }
 }
 
 pub fn ParseTokens(allocator: *std.mem.Allocator, tokens: []Token, index: *usize) !?[]?*ASTNode {
@@ -24,19 +28,39 @@ pub fn ParseTokens(allocator: *std.mem.Allocator, tokens: []Token, index: *usize
                 switch (key) {
                     .const_kw, .var_kw => {
                         const node = parseVariableDeclaration(allocator, tokens, index);
-                        if (node == null) break;
-                        try node_list.append(node);
+                        if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
+                        if (node != null)
+                            try node_list.append(node);
                     },
-                    else => break,
+                    else => {},
                 }
             },
             .IDENTIFIER => {
-                const node = parseVariableReference(allocator, tokens, index);
-                if (node == null) break;
-                try node_list.append(node);
+                const node = parseAssignment(allocator, tokens, index);
+                if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
+                if (node != null) {
+                    try node_list.append(node);
+                } else {
+                    const fallback_node = parseVariableReference(allocator, tokens, index);
+                    if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
+                    if (fallback_node != null) {
+                        try node_list.append(fallback_node);
+                    } else {}
+                }
+                // const node = parseVariableReference(allocator, tokens, index);
+                // if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
+                // if (node != null) {
+                //     try node_list.append(node);
+                // } else {
+                //     const fallback_node = parseAssignment(allocator, tokens, index);
+                //     if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
+                //     if (fallback_node != null) {
+                //         try node_list.append(fallback_node);
+                //     } else {}
+                // }
             },
-
-            else => break,
+            .EOF, .UNKNOWN => break,
+            else => {},
         }
     }
 
@@ -78,8 +102,6 @@ pub fn parseVariableDeclaration(allocator: *std.mem.Allocator, tokens: []Token, 
     if (token_type != .PONTUATION) return null;
     if (token_type.PONTUATION != .semi_colon) return null;
 
-    advance(tokens, index, &token_type);
-
     const xprsNode = allocator.create(ASTNode) catch return null;
 
     xprsNode.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
@@ -88,6 +110,7 @@ pub fn parseVariableDeclaration(allocator: *std.mem.Allocator, tokens: []Token, 
 
     node.* = .{ .kind = .VariableDeclaration, .data = .{ .VariableDeclaration = .{ .name = varName, .expression = xprsNode } } };
 
+    advance(tokens, index, &token_type);
     return node;
 }
 
@@ -102,16 +125,14 @@ pub fn parseVariableReference(allocator: *std.mem.Allocator, tokens: []Token, in
 
     advance(tokens, index, &token_type);
 
-    if (token_type != .PONTUATION) {
-        return parseAssignment(allocator, tokens, index);
-    }
+    if (token_type != .PONTUATION) return null;
     if (token_type.PONTUATION != .semi_colon) return null;
-
-    advance(tokens, index, &token_type);
 
     const node = allocator.create(ASTNode) catch return null;
 
     node.* = .{ .kind = .VariableReference, .data = .{ .VariableReference = .{ .name = varName } } };
+
+    advance(tokens, index, &token_type);
 
     return node;
 }
@@ -147,6 +168,8 @@ pub fn parseAssignment(allocator: *std.mem.Allocator, tokens: []Token, index: *u
     const node = allocator.create(ASTNode) catch return null;
 
     node.* = .{ .kind = .Assignment, .data = .{ .Assignment = .{ .variable = varRef, .expression = xprsNode } } };
+
+    advance(tokens, index, &token_type);
 
     return node;
 }

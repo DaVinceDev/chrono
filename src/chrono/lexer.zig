@@ -230,10 +230,9 @@ pub fn tokens(self: *Lexer) ![]Token {
 
     while (true) {
         const token = self.next();
-        if (token.token_type == .EOF) break;
         _ = try map.append(token);
+        if (token.token_type == .EOF) break;
     }
 
     return map.items;
 }
-

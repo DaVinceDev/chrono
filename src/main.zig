@@ -1,10 +1,11 @@
 const std = @import("std");
+const Token = @import("chrono/token.zig");
 const Lexer = @import("chrono/lexer.zig");
 const Parser = @import("chrono/parser.zig");
 const ASTNode = @import("chrono/ast.zig");
 
 pub fn main() !void {
-    var file = try std.fs.cwd().openFile("syntaxv1/basics.ksm", .{ .mode = .read_only });
+    var file = try std.fs.cwd().openFile("syntaxv1/basics.aom", .{ .mode = .read_only });
 
     var contentBuf: [1024]u8 = undefined;
     const contentBytes = try file.readAll(&contentBuf);
@@ -17,11 +18,14 @@ pub fn main() !void {
 
     var index: usize = 0;
     const tokens = try lexer.tokens();
+
+    std.debug.print("Last token type: {}\n", .{tokens[tokens.len - 1]});
     std.debug.print("Tokens size:{}\n\n", .{tokens.len});
 
     const nodes = try Parser.ParseTokens(&allocator, tokens, &index);
 
     if (nodes != null) {
+        std.debug.print("Nodes has length of {}\n", .{nodes.?.len});
         for (nodes.?) |node| {
             prettyPrinter(node);
         }
@@ -30,6 +34,11 @@ pub fn main() !void {
     }
 }
 
+fn tokenPrinter(tokens: []Token) void {
+    for (tokens, 0..) |t, i| {
+        std.debug.print("[TOKEN]: {s}\t[INDEX]: {}\t\t[TYPE]: {}\n", .{ t.lexeme, i, t.token_type });
+    }
+}
 fn prettyPrinter(node: ?*ASTNode) void {
     const nodeKind = node.?.kind;
     const nodeData = node.?.data;
