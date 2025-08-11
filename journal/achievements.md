@@ -68,3 +68,13 @@ Kind: VariableReference
 Kind: VariableReference
 	VariableReference:
 	y
+
+## First operation
+
+operation: 10 + 20
+Nodes has length of 1
+Kind: BinaryOperator
+	BinaryOperator:
+	Left: chrono.ast{ .kind = chrono.ast.NodeKind.NumberLiteral, .data = chrono.ast__union_23960{ .NumberLiteral = chrono.ast__union_23960__struct_23963{ .value = 10 } } }
+Operator: +
+Right: chrono.ast{ .kind = chrono.ast.NodeKind.NumberLiteral, .data = chrono.ast__union_23960{ .NumberLiteral = chrono.ast__union_23960__struct_23963{ .value = 20 } } }
