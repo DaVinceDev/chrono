@@ -5,7 +5,7 @@ const Parser = @import("chrono/parser.zig");
 const ASTNode = @import("chrono/ast.zig");
 
 pub fn main() !void {
-    var file = try std.fs.cwd().openFile("syntaxv1/basics.aom", .{ .mode = .read_only });
+    var file = try std.fs.cwd().openFile("syntaxv1/basics.chro", .{ .mode = .read_only });
 
     var contentBuf: [1024]u8 = undefined;
     const contentBytes = try file.readAll(&contentBuf);
@@ -14,15 +14,16 @@ pub fn main() !void {
 
     var lexer = Lexer.init(content);
 
-    var allocator = std.heap.page_allocator;
+    const allocator = std.heap.page_allocator;
 
-    var index: usize = 0;
     const tokens = try lexer.tokens();
 
     std.debug.print("Last token type: {}\n", .{tokens[tokens.len - 1]});
     std.debug.print("Tokens size:{}\n\n", .{tokens.len});
 
-    const nodes = try Parser.ParseTokens(&allocator, tokens, &index);
+    var parser = Parser.init(allocator, tokens);
+
+    const nodes = try parser.ParseTokens();
 
     if (nodes != null) {
         std.debug.print("Nodes has length of {}\n", .{nodes.?.len});

@@ -4,190 +4,131 @@ const std = @import("std");
 
 const Parser = @This();
 
-pub fn advance(tokens: []Token, index: *usize, token_type: *Token.TokenType) void {
-    if (index.* + 1 >= tokens.len) {
-        index.* = tokens.len;
-        token_type.* = .EOF;
-    } else {
-        index.* += 1;
-        token_type.* = tokens[index.*].token_type;
-    }
+allocator: std.mem.Allocator,
+tokens: []Token,
+index: usize = 0,
+
+pub fn init(allocator: std.mem.Allocator, tokens: []Token) Parser {
+    return Parser{ .allocator = allocator, .tokens = tokens, .index = 0 };
 }
 
-pub fn ParseTokens(allocator: *std.mem.Allocator, tokens: []Token, index: *usize) !?[]?*ASTNode {
+/// Parses the tokens list
+/// Returns an array of possibly null ASTNodes
+pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
     var node_list = std.ArrayList(?*ASTNode).init(std.heap.page_allocator);
 
     while (true) {
-        if (index.* >= tokens.len) {
-            std.debug.print("Index reached or surpassed tokens length!\n", .{});
-            return null;
-        }
-        const token_type = tokens[index.*].token_type;
-        switch (token_type) {
+        if (self.index >= self.tokens.len) return null;
+        const current_token = self.tokens[self.index];
+
+        switch (current_token.token_type) {
             .KEYWORD => |key| {
                 switch (key) {
                     .const_kw, .var_kw => {
-                        const node = parseVariableDeclaration(allocator, tokens, index);
-                        if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
-                        if (node != null)
-                            try node_list.append(node);
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+
+                        var tokentype = self.tokens[self.index].token_type;
+
+                        if (tokentype != .IDENTIFIER) return null;
+
+                        const varName = self.tokens[self.index].lexeme;
+
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+
+                        tokentype = self.tokens[self.index].token_type;
+
+                        if (tokentype != .OPERATOR) return null;
+                        if (tokentype.OPERATOR != .equal) return null;
+
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+
+                        const value = std.fmt.parseInt(i64, self.tokens[self.index].lexeme, 10) catch return null;
+
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+
+                        tokentype = self.tokens[self.index].token_type;
+
+                        if (tokentype != .PONTUATION) return null;
+                        if (tokentype.PONTUATION != .semi_colon) return null;
+
+                        const x_node = self.allocator.create(ASTNode) catch return null;
+
+                        x_node.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
+
+                        const node = self.allocator.create(ASTNode) catch return null;
+
+                        node.* = .{ .kind = .VariableDeclaration, .data = .{ .VariableDeclaration = .{ .expression = x_node, .name = varName } } };
+
+                        try node_list.append(node);
+
+                        self.index += 1;
                     },
-                    else => {},
+                    else => break,
                 }
             },
             .IDENTIFIER => {
-                const node = parseAssignment(allocator, tokens, index);
-                if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
-                if (node != null) {
-                    try node_list.append(node);
-                } else {
-                    const fallback_node = parseVariableReference(allocator, tokens, index);
-                    if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
-                    if (fallback_node != null) {
-                        try node_list.append(fallback_node);
-                    } else {}
+                const varName = self.tokens[self.index].lexeme;
+
+                if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                self.index += 1;
+                const tokentype = self.tokens[self.index].token_type;
+
+                switch (tokentype) {
+                    .OPERATOR => |op| {
+                        if (op != .equal) return null;
+
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+                        var t2 = self.tokens[self.index].token_type;
+
+                        const value = std.fmt.parseInt(i64, self.tokens[self.index].lexeme, 10) catch return null;
+
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+                        t2 = self.tokens[self.index].token_type;
+
+                        if (t2 != .PONTUATION) return null;
+                        if (t2.PONTUATION != .semi_colon) return null;
+
+                        const a_node = self.allocator.create(ASTNode) catch return null;
+
+                        a_node.* = .{ .kind = .VariableReference, .data = .{ .VariableReference = .{
+                            .name = varName,
+                        } } };
+
+                        const v_node = self.allocator.create(ASTNode) catch return null;
+
+                        v_node.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
+
+                        const node = self.allocator.create(ASTNode) catch return null;
+
+                        node.* = .{ .kind = .Assignment, .data = .{ .Assignment = .{ .variable = a_node, .expression = v_node } } };
+
+                        try node_list.append(node);
+
+                        self.index += 1;
+                    },
+                    .PONTUATION => {
+                        const ref_node = self.allocator.create(ASTNode) catch return null;
+                        ref_node.* = .{
+                            .kind = .VariableReference,
+                            .data = .{ .VariableReference = .{ .name = varName } },
+                        };
+
+                        try node_list.append(ref_node);
+
+                        self.index += 1;
+                    },
+                    else => return null,
                 }
-                // const node = parseVariableReference(allocator, tokens, index);
-                // if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
-                // if (node != null) {
-                //     try node_list.append(node);
-                // } else {
-                //     const fallback_node = parseAssignment(allocator, tokens, index);
-                //     if (index.* >= tokens.len or tokens[index.* + 1].token_type == .EOF) break;
-                //     if (fallback_node != null) {
-                //         try node_list.append(fallback_node);
-                //     } else {}
-                // }
             },
             .EOF, .UNKNOWN => break,
             else => {},
         }
     }
-
     return node_list.items;
-}
-
-pub fn parseVariableDeclaration(allocator: *std.mem.Allocator, tokens: []Token, index: *usize) ?*ASTNode {
-    // Procedure:
-    // 1. keyword
-    // 2. identifier
-    // 3. symbol \ null
-    // 4. type | null
-    // 5. assign operator
-    // 6. Value
-
-    if (index.* >= tokens.len) return null;
-    var token_type = tokens[index.*].token_type;
-
-    if (token_type != .KEYWORD) return null;
-
-    advance(tokens, index, &token_type);
-
-    if (token_type != .IDENTIFIER) return null;
-
-    const varName = tokens[index.*].lexeme;
-
-    advance(tokens, index, &token_type);
-
-    if (token_type != .OPERATOR) return null;
-
-    if (token_type.OPERATOR != .equal) return null;
-
-    advance(tokens, index, &token_type);
-
-    const value = parseIntFromLexeme(tokens[index.*].lexeme) orelse return null;
-
-    advance(tokens, index, &token_type);
-
-    if (token_type != .PONTUATION) return null;
-    if (token_type.PONTUATION != .semi_colon) return null;
-
-    const xprsNode = allocator.create(ASTNode) catch return null;
-
-    xprsNode.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
-
-    const node = allocator.create(ASTNode) catch return null;
-
-    node.* = .{ .kind = .VariableDeclaration, .data = .{ .VariableDeclaration = .{ .name = varName, .expression = xprsNode } } };
-
-    advance(tokens, index, &token_type);
-    return node;
-}
-
-pub fn parseVariableReference(allocator: *std.mem.Allocator, tokens: []Token, index: *usize) ?*ASTNode {
-    if (index.* >= tokens.len) return null;
-
-    var token_type = tokens[index.*].token_type;
-
-    if (token_type != .IDENTIFIER) return null;
-
-    const varName = tokens[index.*].lexeme;
-
-    advance(tokens, index, &token_type);
-
-    if (token_type != .PONTUATION) return null;
-    if (token_type.PONTUATION != .semi_colon) return null;
-
-    const node = allocator.create(ASTNode) catch return null;
-
-    node.* = .{ .kind = .VariableReference, .data = .{ .VariableReference = .{ .name = varName } } };
-
-    advance(tokens, index, &token_type);
-
-    return node;
-}
-
-pub fn parseAssignment(allocator: *std.mem.Allocator, tokens: []Token, index: *usize) ?*ASTNode {
-    if (index.* >= tokens.len) return null;
-
-    var token_type = tokens[index.*].token_type;
-
-    if (token_type != .IDENTIFIER) return null;
-
-    const varName = tokens[index.*].lexeme;
-
-    advance(tokens, index, &token_type);
-
-    if (token_type != .OPERATOR) return null;
-    if (token_type.OPERATOR != .equal) return null;
-
-    advance(tokens, index, &token_type);
-
-    const value = parseIntFromLexeme(tokens[index.*].lexeme) orelse return null;
-
-    const varRef = allocator.create(ASTNode) catch return null;
-
-    varRef.* = .{ .kind = .VariableReference, .data = .{ .VariableReference = .{ .name = varName } } };
-
-    advance(tokens, index, &token_type);
-
-    const xprsNode = allocator.create(ASTNode) catch return null;
-
-    xprsNode.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
-
-    const node = allocator.create(ASTNode) catch return null;
-
-    node.* = .{ .kind = .Assignment, .data = .{ .Assignment = .{ .variable = varRef, .expression = xprsNode } } };
-
-    advance(tokens, index, &token_type);
-
-    return node;
-}
-
-// pub fn parseFunctionDeclaration(_: *Parser, allocator: *std.mem.Allocator, tokens: []Token, index: *usize) ?*ASTNode {
-//     // Procedure:
-//     // 1. keyword
-//     // 2. identifier
-//     // 3. parameters
-//     // 4. pontuation | null
-//     // 5. type
-//     // 6. blocks
-//     //
-//     _ = allocator
-// }
-//
-//
-fn parseIntFromLexeme(lexeme: []const u8) ?i64 {
-    const num = std.fmt.parseInt(i32, lexeme, 10) catch return null;
-    return num;
 }
