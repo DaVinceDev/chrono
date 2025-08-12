@@ -30,7 +30,7 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
 
                         var tokentype = self.tokens[self.index].token_type;
 
-                        if (tokentype != .IDENTIFIER) return null;
+                        if (tokentype != .IDENTIFIER) return error.ExpectedIdentifier;
 
                         const varName = self.tokens[self.index].lexeme;
 
@@ -39,27 +39,27 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
 
                         tokentype = self.tokens[self.index].token_type;
 
-                        if (tokentype != .OPERATOR) return null;
-                        if (tokentype.OPERATOR != .equal) return null;
+                        if (tokentype != .OPERATOR) return error.ExpectedOperator;
+                        if (tokentype.OPERATOR != .equal) return error.ExpectedOperatorEqual;
 
                         if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
                         self.index += 1;
 
-                        const value = std.fmt.parseInt(i64, self.tokens[self.index].lexeme, 10) catch return null;
+                        const value = try std.fmt.parseInt(i64, self.tokens[self.index].lexeme, 10);
 
                         if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
                         self.index += 1;
 
                         tokentype = self.tokens[self.index].token_type;
 
-                        if (tokentype != .PONTUATION) return null;
-                        if (tokentype.PONTUATION != .semi_colon) return null;
+                        if (tokentype != .PONTUATION) return error.ExpectedPuntuaction;
+                        if (tokentype.PONTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
 
-                        const x_node = self.allocator.create(ASTNode) catch return null;
+                        const x_node = try self.allocator.create(ASTNode);
 
                         x_node.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
 
-                        const node = self.allocator.create(ASTNode) catch return null;
+                        const node = try self.allocator.create(ASTNode);
 
                         node.* = .{ .kind = .VariableDeclaration, .data = .{ .VariableDeclaration = .{ .expression = x_node, .name = varName } } };
 
@@ -78,42 +78,92 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
                 const tokentype = self.tokens[self.index].token_type;
 
                 switch (tokentype) {
+                    // ASSIGNMENT
+                    // Procedure:
+                    // IDENTIFIER
+                    // operator
+                    // binary expression
+                    // semi_colon
                     .OPERATOR => |op| {
-                        if (op != .equal) return null;
+                        if (op != .equal) return error.ExpectedOperatorEqual;
 
                         if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
                         self.index += 1;
                         var t2 = self.tokens[self.index].token_type;
 
-                        const value = std.fmt.parseInt(i64, self.tokens[self.index].lexeme, 10) catch return null;
+                        const value = try std.fmt.parseInt(i64, self.tokens[self.index].lexeme, 10);
 
                         if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
                         self.index += 1;
                         t2 = self.tokens[self.index].token_type;
 
-                        if (t2 != .PONTUATION) return null;
-                        if (t2.PONTUATION != .semi_colon) return null;
+                        if (t2 == .PONTUATION) {
+                            if (t2.PONTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
 
-                        const a_node = self.allocator.create(ASTNode) catch return null;
+                            const a_node = try self.allocator.create(ASTNode);
 
-                        a_node.* = .{ .kind = .VariableReference, .data = .{ .VariableReference = .{
-                            .name = varName,
-                        } } };
+                            a_node.* = .{ .kind = .VariableReference, .data = .{ .VariableReference = .{
+                                .name = varName,
+                            } } };
 
-                        const v_node = self.allocator.create(ASTNode) catch return null;
+                            const v_node = try self.allocator.create(ASTNode);
 
-                        v_node.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
+                            v_node.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
 
-                        const node = self.allocator.create(ASTNode) catch return null;
+                            const node = try self.allocator.create(ASTNode);
 
-                        node.* = .{ .kind = .Assignment, .data = .{ .Assignment = .{ .variable = a_node, .expression = v_node } } };
+                            node.* = .{ .kind = .Assignment, .data = .{ .Assignment = .{ .variable = a_node, .expression = v_node } } };
 
-                        try node_list.append(node);
+                            try node_list.append(node);
 
-                        self.index += 1;
+                            self.index += 1;
+                        } else if (t2 == .OPERATOR) {
+                            if (t2.OPERATOR == .equal) return null;
+
+                            const oper: u8 = self.tokens[self.index].lexeme[0];
+
+                            if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                            self.index += 1;
+
+                            const value2 = try std.fmt.parseInt(i64, self.tokens[self.index].lexeme, 10);
+
+                            if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                            self.index += 1;
+                            t2 = self.tokens[self.index].token_type;
+
+                            if (t2 != .PONTUATION) {
+                                std.debug.print("Error: Expected puntuaction type got: {s} with type: {}\n", .{ self.tokens[self.index].lexeme, self.tokens[self.index].token_type });
+                                return error.ExpectedPuntuaction;
+                            }
+                            if (t2.PONTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
+
+                            const l_node = try self.allocator.create(ASTNode);
+
+                            l_node.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value } } };
+                            const r_node = try self.allocator.create(ASTNode);
+
+                            r_node.* = .{ .kind = .NumberLiteral, .data = .{ .NumberLiteral = .{ .value = value2 } } };
+
+                            const bin_node = try self.allocator.create(ASTNode);
+
+                            bin_node.* = .{ .kind = .BinaryOperator, .data = .{ .BinaryOperator = .{ .left = l_node, .right = r_node, .operator = oper } } };
+
+                            const varRef = try self.allocator.create(ASTNode);
+
+                            varRef.* = .{ .kind = .VariableReference, .data = .{ .VariableReference = .{ .name = varName } } };
+
+                            const node = try self.allocator.create(ASTNode);
+
+                            node.* = .{ .kind = .Assignment, .data = .{ .Assignment = .{ .expression = bin_node, .variable = varRef } } };
+
+                            try node_list.append(node);
+
+                            self.index += 1;
+                        }
                     },
+                    // VARIABLE REFERENCE
                     .PONTUATION => {
-                        const ref_node = self.allocator.create(ASTNode) catch return null;
+                        const ref_node = try self.allocator.create(ASTNode);
                         ref_node.* = .{
                             .kind = .VariableReference,
                             .data = .{ .VariableReference = .{ .name = varName } },

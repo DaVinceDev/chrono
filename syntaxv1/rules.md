@@ -8,7 +8,7 @@ const → constants
 var → mutable variables
 
 const x: type = value;
-var y = YYY(args);
+var y = SomeClass();
 
 # Imports
 
