@@ -1,13 +1,54 @@
-//! By convention, root.zig is the root source file when making a library. If
-//! you are making an executable, the convention is to delete this file and
-//! start with main.zig instead.
 const std = @import("std");
-const testing = std.testing;
+const expect = std.testing.expect;
+const Lexer = @import("../src/chrono/lexer.zig");
+const Parser = @import("../src/chrono/parser.zig");
 
-pub export fn add(a: i32, b: i32) i32 {
-    return a + b;
+test "token list" {
+    var file = try std.fs.cwd().openFile("syntaxv1/basics.chro", .{ .mode = .read_only });
+    defer file.close();
+
+    var buf: [1024]u8 = undefined;
+    const bytes = try file.read(&buf);
+    const content = buf[0..bytes];
+
+    var lexer = Lexer.init(content);
+    const tokens = try lexer.tokens();
+
+    try expect(tokens.len != 0);
 }
 
-test "basic add functionality" {
-    try testing.expect(add(3, 7) == 10);
+test "variable declaration" {
+    var file = try std.fs.cwd().openFile("syntaxv1/basics.chro", .{ .mode = .read_only });
+    defer file.close();
+
+    var buf: [1024]u8 = undefined;
+    const bytes = try file.read(&buf);
+    const content = buf[0..bytes];
+
+    var lexer = Lexer.init(content);
+    const tokens = try lexer.tokens();
+
+    var parser = Parser.init(std.heap.page_allocator, tokens);
+    const tokens_parsed = try parser.ParseTokens();
+
+    try expect(tokens_parsed != null);
+    try expect(tokens_parsed.?.len != 0);
+}
+
+test "binary operations" {
+    var file = try std.fs.cwd().openFile("syntaxv1/operations.chro", .{ .mode = .read_only });
+    defer file.close();
+
+    var buf: [1024]u8 = undefined;
+    const bytes = try file.read(&buf);
+    const content = buf[0..bytes];
+
+    var lexer = Lexer.init(content);
+    const tokens = try lexer.tokens();
+
+    var parser = Parser.init(std.heap.page_allocator, tokens);
+    const tokens_parsed = try parser.ParseTokens();
+
+    try expect(tokens_parsed != null);
+    try expect(tokens_parsed.?.len != 0);
 }

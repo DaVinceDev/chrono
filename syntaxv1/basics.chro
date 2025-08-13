@@ -1,6 +1,6 @@
-var x = 20;
-var y = 40;
-const z = 50;
+var x: i32 = 20;
+var y: i32 = 40;
+const z: i32 = 50;
 
 x = 25;
 

@@ -183,12 +183,12 @@ pub fn isSymbol(_: *Lexer, char: u8) bool {
 
 pub fn whichPontuation(_: *Lexer, char: u8) ?Token.TokenType {
     switch (char) {
-        ';' => return Token.TokenType{ .PONTUATION = .semi_colon },
-        ',' => return Token.TokenType{ .PONTUATION = .comma },
-        '?' => return Token.TokenType{ .PONTUATION = .interogation },
-        '!' => return Token.TokenType{ .PONTUATION = .exclamation },
-        '.' => return Token.TokenType{ .PONTUATION = .dot },
-        ':' => return Token.TokenType{ .PONTUATION = .colon },
+        ';' => return Token.TokenType{ .PUNCTUATION = .semi_colon },
+        ',' => return Token.TokenType{ .PUNCTUATION = .comma },
+        '?' => return Token.TokenType{ .PUNCTUATION = .interogation },
+        '!' => return Token.TokenType{ .PUNCTUATION = .exclamation },
+        '.' => return Token.TokenType{ .PUNCTUATION = .dot },
+        ':' => return Token.TokenType{ .PUNCTUATION = .colon },
         else => return null,
     }
 }

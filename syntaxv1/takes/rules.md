@@ -134,7 +134,16 @@ const fail_errorswitch = invalidFunction() errorswitch {
 const array: []type = {elem1, elem2};
 
 
+
+
+
 # AI takes 
+
+
+
+
+
+
 
 # Chrono Language: Design Summary (So Far)
 

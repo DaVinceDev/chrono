@@ -8,9 +8,9 @@ and self-suficient standard libraries in a programming language.
 Chrono is inspired by a set of languages features: 
 
 - C++ → RAII 
-- C# → Great frameworks 
-- Zig → Syntax 
-- Go → Standard library 
+- C# → Great frameworks (EF, ASPNET) 
+- Zig → Syntax and solid standard library 
+- Go → Clarity 
 
 Combining such language features we basically get **Chrono**. 
 

@@ -34,6 +34,22 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
 
                         const varName = self.tokens[self.index].lexeme;
 
+                        //
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+
+                        tokentype = self.tokens[self.index].token_type;
+
+                        if (tokentype != .PUNCTUATION) return error.ExpectedPuntuaction;
+                        if (tokentype.PUNCTUATION != .colon) return error.ExpectedPuntuactionColon;
+
+                        if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
+                        self.index += 1;
+
+                        tokentype = self.tokens[self.index].token_type;
+
+                        if (tokentype != .IDENTIFIER) return error.ExpectedIdentifier;
+
                         if (self.index + 1 >= self.tokens.len or self.tokens[self.index + 1].token_type == .EOF) return null;
                         self.index += 1;
 
@@ -66,11 +82,11 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
                             self.index += 1;
                             tokentype = self.tokens[self.index].token_type;
 
-                            if (tokentype != .PONTUATION) {
+                            if (tokentype != .PUNCTUATION) {
                                 std.debug.print("Error: Expected puntuaction type got: {s} with type: {}\n", .{ self.tokens[self.index].lexeme, self.tokens[self.index].token_type });
                                 return error.ExpectedPuntuaction;
                             }
-                            if (tokentype.PONTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
+                            if (tokentype.PUNCTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
 
                             const l_node = try self.allocator.create(ASTNode);
 
@@ -81,7 +97,7 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
 
                             const bin_node = try self.allocator.create(ASTNode);
 
-                            bin_node.* = .{ .kind = .BinaryOperator, .data = .{ .BinaryOperator = .{ .left = l_node, .right = r_node, .operator = oper } } };
+                            bin_node.* = .{ .kind = .BinaryOperation, .data = .{ .BinaryOperation = .{ .left = l_node, .right = r_node, .operator = oper } } };
 
                             const varRef = try self.allocator.create(ASTNode);
 
@@ -94,8 +110,8 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
                             try node_list.append(node);
 
                             self.index += 1;
-                        } else if (tokentype == .PONTUATION) {
-                            if (tokentype.PONTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
+                        } else if (tokentype == .PUNCTUATION) {
+                            if (tokentype.PUNCTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
 
                             const x_node = try self.allocator.create(ASTNode);
 
@@ -140,8 +156,8 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
                         self.index += 1;
                         t2 = self.tokens[self.index].token_type;
 
-                        if (t2 == .PONTUATION) {
-                            if (t2.PONTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
+                        if (t2 == .PUNCTUATION) {
+                            if (t2.PUNCTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
 
                             const a_node = try self.allocator.create(ASTNode);
 
@@ -174,11 +190,11 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
                             self.index += 1;
                             t2 = self.tokens[self.index].token_type;
 
-                            if (t2 != .PONTUATION) {
+                            if (t2 != .PUNCTUATION) {
                                 std.debug.print("Error: Expected puntuaction type got: {s} with type: {}\n", .{ self.tokens[self.index].lexeme, self.tokens[self.index].token_type });
                                 return error.ExpectedPuntuaction;
                             }
-                            if (t2.PONTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
+                            if (t2.PUNCTUATION != .semi_colon) return error.ExpectedPuntuactionSemiColon;
 
                             const l_node = try self.allocator.create(ASTNode);
 
@@ -189,7 +205,7 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
 
                             const bin_node = try self.allocator.create(ASTNode);
 
-                            bin_node.* = .{ .kind = .BinaryOperator, .data = .{ .BinaryOperator = .{ .left = l_node, .right = r_node, .operator = oper } } };
+                            bin_node.* = .{ .kind = .BinaryOperation, .data = .{ .BinaryOperation = .{ .left = l_node, .right = r_node, .operator = oper } } };
 
                             const varRef = try self.allocator.create(ASTNode);
 
@@ -205,7 +221,8 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
                         }
                     },
                     // VARIABLE REFERENCE
-                    .PONTUATION => {
+                    .PUNCTUATION => |p| {
+                        if (p == .colon) return error.UnexpectedOperatorColon;
                         const ref_node = try self.allocator.create(ASTNode);
                         ref_node.* = .{
                             .kind = .VariableReference,
@@ -247,7 +264,7 @@ pub fn ParseTokens(self: *Parser) !?[]?*ASTNode {
                 const node = self.allocator.create(ASTNode) catch return null;
 
                 std.debug.print("operation: {} {c} {}\n", .{ v1, op_node, v2 });
-                node.* = .{ .kind = .BinaryOperator, .data = .{ .BinaryOperator = .{ .left = lef_node, .operator = op_node, .right = ri_node } } };
+                node.* = .{ .kind = .BinaryOperation, .data = .{ .BinaryOperation = .{ .left = lef_node, .operator = op_node, .right = ri_node } } };
 
                 try node_list.append(node);
 

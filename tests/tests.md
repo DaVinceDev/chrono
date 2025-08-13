@@ -1,0 +1,5 @@
+# Tests
+
+FOR NOW ALL TESTS ARE ON ROOT.ZIG! 
+
+TODO: TESTS :O
